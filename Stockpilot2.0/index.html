@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockPilot — Inventory Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">📦</div>
+      <div>
+        <h1>StockPilot</h1>
+        <span>Inventory Management</span>
+      </div>
+    </div>
+    <div class="error-msg" id="login-error">Invalid username or password</div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="admin" autocomplete="username"/>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Sign In →</button>
+    <p class="login-hint">Login using your verified email & password</p>
+<div style="display:flex;gap:8px;margin-top:10px">
+<button class="btn-primary" onclick="showSignup()" style="background:#374151">Create Account</button>
+<button class="btn-primary" onclick="forgotPassword()" style="background:#4b5563">Forgot Password</button>
+</div>
+
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">📦</div>
+      <h2>StockPilot</h2>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">🏠</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('inventory')"><span class="nav-icon">📋</span> Inventory</div>
+      <div class="nav-item" onclick="showPage('sales')"><span class="nav-icon">🛒</span> Sales / POS</div>
+      <div class="nav-item" onclick="showPage('invoices')"><span class="nav-icon">🧾</span> Invoices</div>
+      <div class="nav-item" onclick="showPage('audit')"><span class="nav-icon">📜</span> Audit Log</div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-badge">
+        <div class="user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div class="user-name" id="sidebar-name">Admin</div>
+          <div class="user-role">Store Manager</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">⬅ Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div><div class="page-title">Dashboard</div><div class="page-sub">Inventory overview & quick stats</div></div>
+        <div style="display:flex;gap:.6rem">
+          <button class="btn btn-ghost btn-sm" onclick="showPage('inventory')">View Inventory →</button>
+        </div>
+      </div>
+      <div id="low-stock-banner" class="alert-banner" style="display:none">
+        ⚠️ <span id="low-stock-text"></span>
+      </div>
+      <div class="stats-grid" id="dash-stats"></div>
+      <div class="recent-grid">
+        <div>
+          <div class="table-wrap">
+            <div class="table-toolbar"><span class="section-title">Recent Transactions</span></div>
+            <table id="dash-transactions">
+              <thead><tr><th>Product</th><th>Type</th><th>Qty</th><th>Amount</th><th>Time</th></tr></thead>
+              <tbody id="dash-transactions-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="table-wrap">
+            <div class="table-toolbar"><span class="section-title">Low Stock Alert</span></div>
+            <table>
+              <thead><tr><th>Product</th><th>Stock</th><th>Threshold</th></tr></thead>
+              <tbody id="low-stock-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div class="page" id="page-inventory">
+      <div class="page-header">
+        <div><div class="page-title">Inventory</div><div class="page-sub">Manage and track all products</div></div>
+        <button class="btn btn-accent" onclick="openProductModal()">+ Add Product</button>
+      </div>
+      <div id="inv-low-banner" class="alert-banner" style="display:none">
+        ⚠️ <span id="inv-low-text"></span>
+      </div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="search-box"><input type="text" placeholder="Search products..." id="inv-search" oninput="renderInventory()"></div>
+          <div class="cat-filter" id="cat-filter"></div>
+          <select id="inv-sort" onchange="renderInventory()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .9rem;color:var(--text);font-size:.8rem;font-family:'Sora',sans-serif;outline:none">
+            <option value="name">Sort: Name</option>
+            <option value="stock">Sort: Stock</option>
+            <option value="price">Sort: Price</option>
+            <option value="category">Sort: Category</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Stock</th><th>Unit Price</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="inv-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SALES / POS -->
+    <div class="page" id="page-sales">
+      <div class="page-header">
+        <div><div class="page-title">Sales / POS</div><div class="page-sub">Process sales and manage transactions</div></div>
+      </div>
+      <div class="cart-wrap">
+        <div>
+          <div class="table-wrap">
+            <div class="table-toolbar">
+              <div class="search-box"><input type="text" placeholder="Search products to add..." id="pos-search" oninput="renderPOS()"></div>
+            </div>
+            <table>
+              <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Available</th><th>Add</th></tr></thead>
+              <tbody id="pos-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="cart-panel">
+          <div class="section-title" style="margin-bottom:.8rem">🛒 Cart</div>
+          <div class="form-field" style="margin-bottom:.8rem">
+            <label>Customer Name</label>
+            <input type="text" id="customer-name" placeholder="Walk-in Customer">
+          </div>
+          <div class="cart-items" id="cart-items-list"><div class="empty-state" style="padding:1.5rem 0"><div class="empty-icon">🛒</div><p>Cart is empty</p></div></div>
+          <div class="cart-total" id="cart-total-section" style="display:none">
+            <div class="cart-total-row"><span>Subtotal</span><span id="ct-sub">₹0</span></div>
+            <div class="cart-total-row"><span>Tax (18% GST)</span><span id="ct-tax">₹0</span></div>
+            <div class="cart-total-row grand"><span>Total</span><span id="ct-total">₹0</span></div>
+            <div style="display:flex;gap:.6rem;margin-top:1rem">
+              <button class="btn btn-danger" style="flex:0 0 auto" onclick="clearCart()">Clear</button>
+              <button class="btn btn-green" style="flex:1" onclick="processSale()">✓ Process Sale</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVOICES -->
+    <div class="page" id="page-invoices">
+      <div class="page-header">
+        <div><div class="page-title">Invoices</div><div class="page-sub">View and print past invoices</div></div>
+      </div>
+      <div class="table-wrap" id="invoices-list-wrap">
+        <div class="table-toolbar"><div class="search-box"><input type="text" placeholder="Search invoices..." id="inv-search2" oninput="renderInvoicesList()"></div></div>
+        <table>
+          <thead><tr><th>Invoice #</th><th>Customer</th><th>Items</th><th>Total</th><th>Date</th><th>Action</th></tr></thead>
+          <tbody id="invoices-list-body"></tbody>
+        </table>
+      </div>
+      <div id="invoice-detail" style="display:none">
+        <div class="print-controls">
+          <button class="btn btn-ghost" onclick="closeInvoiceDetail()">← Back to List</button>
+          <button class="btn btn-accent" onclick="window.print()">🖨 Print Invoice</button>
+        </div>
+        <div class="invoice-preview" id="invoice-content"></div>
+      </div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div class="page" id="page-audit">
+      <div class="page-header">
+        <div><div class="page-title">Audit Log</div><div class="page-sub">Complete history of all actions</div></div>
+        <button class="btn btn-danger btn-sm" onclick="if(confirm('Clear audit log?')){auditLog=[];saveData();renderAudit();toast('Audit log cleared','info')}">Clear Log</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="search-box"><input type="text" placeholder="Search log..." id="audit-search" oninput="renderAudit()"></div>
+          <select id="audit-type" onchange="renderAudit()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .9rem;color:var(--text);font-size:.8rem;font-family:'Sora',sans-serif;outline:none">
+            <option value="">All Types</option>
+            <option value="ADD">Add</option>
+            <option value="EDIT">Edit</option>
+            <option value="DELETE">Delete</option>
+            <option value="SALE">Sale</option>
+            <option value="LOGIN">Login</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>Time</th><th>User</th><th>Type</th><th>Details</th></tr></thead>
+          <tbody id="audit-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-title-text">Add Product</span>
+      <button class="modal-close" onclick="closeProductModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field"><label>Product Name *</label><input type="text" id="f-name" placeholder="e.g. Organic Apples"></div>
+      <div class="form-field"><label>SKU *</label><input type="text" id="f-sku" placeholder="e.g. PRD-001"></div>
+      <div class="form-field"><label>Category</label>
+        <select id="f-category">
+          <option>Electronics</option><option>Clothing</option><option>Food & Beverage</option>
+          <option>Household</option><option>Stationery</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Unit Price (₹) *</label><input type="number" id="f-price" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="form-field"><label>Stock Quantity *</label><input type="number" id="f-stock" placeholder="0" min="0"></div>
+      <div class="form-field"><label>Low Stock Threshold</label><input type="number" id="f-threshold" placeholder="10" min="0"></div>
+      <div class="form-field full"><label>Description</label><textarea id="f-desc" rows="2" placeholder="Optional product description" style="resize:vertical"></textarea></div>
+      <div class="form-field"><label>Supplier</label><input type="text" id="f-supplier" placeholder="Supplier name"></div>
+      <div class="form-field"><label>Unit</label><select id="f-unit"><option>pcs</option><option>kg</option><option>g</option><option>L</option><option>ml</option><option>box</option><option>pack</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeProductModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- STOCK ADJUST MODAL -->
+<div class="modal-overlay" id="adjust-modal">
+  <div class="modal" style="width:360px">
+    <div class="modal-title">
+      <span>Adjust Stock</span>
+      <button class="modal-close" onclick="closeAdjustModal()">×</button>
+    </div>
+    <p id="adjust-product-name" style="font-size:.85rem;color:var(--text2);margin-bottom:1rem"></p>
+    <div class="form-field" style="margin-bottom:.9rem">
+      <label>Adjustment Type</label>
+      <select id="adj-type"><option value="add">Add Stock (Restock)</option><option value="remove">Remove Stock</option><option value="set">Set Exact Quantity</option></select>
+    </div>
+    <div class="form-field" style="margin-bottom:.9rem">
+      <label>Quantity</label>
+      <input type="number" id="adj-qty" min="0" placeholder="Enter quantity">
+    </div>
+    <div class="form-field">
+      <label>Reason / Note</label>
+      <input type="text" id="adj-note" placeholder="e.g. Monthly restock">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeAdjustModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="applyAdjust()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+
+
+<div class="modal-overlay" id="signup-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-title">
+      <span>Create Account</span>
+      <button class="modal-close" onclick="closeSignup()">×</button>
+    </div>
+
+    <div class="form-field" style="margin-bottom:10px">
+      <label>Name</label>
+      <input type="text" id="signup-name" placeholder="Your Name">
+    </div>
+
+    <div class="form-field" style="margin-bottom:10px">
+      <label>Email</label>
+      <input type="email" id="signup-email" placeholder="your@email.com">
+    </div>
+
+    <div class="form-field">
+      <label>Password</label>
+      <input type="password" id="signup-password" placeholder="Password">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSignup()">Cancel</button>
+      <button class="btn btn-accent" onclick="signupUser()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script src="app.js"></script>
+<script src="firebase-auth.js"></script>
+
+
+</body>
+</html>
