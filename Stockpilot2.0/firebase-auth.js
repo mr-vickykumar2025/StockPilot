@@ -4,13 +4,13 @@
 // Replace with your Firebase credentials
 // ======================================
 const firebaseConfig = {
-  apiKey: "AIzaSyDgZwTfB2FXlLDZgaXHhKHJuFf4g5rnpUk",
-  authDomain: "stockpilot-cb5be.firebaseapp.com",
-  projectId: "stockpilot-cb5be",
-  storageBucket: "stockpilot-cb5be.firebasestorage.app",
-  messagingSenderId: "374846539467",
-  appId: "1:374846539467:web:a6886c798a0f1fa6553d4e",
-  measurementId: "G-TGKG8W0762"
+  apiKey: ,
+  authDomain: ,
+  projectId: ,
+  storageBucket: ,
+  messagingSenderId: ,
+  appId: ,
+  measurementId: 
 };
 
 firebase.initializeApp(firebaseConfig);
